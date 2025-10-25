@@ -1,0 +1,29 @@
+{
+  "name": "payment-app-audio-confirmation",
+  "version": "1.0.0",
+  "description": "Payment web application with AI audio confirmation system",
+  "private": true,
+  "workspaces": [
+    "frontend/user-app",
+    "frontend/merchant-app",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:user-app\" \"npm run dev:merchant-app\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:user-app": "cd frontend/user-app && npm run dev",
+    "dev:merchant-app": "cd frontend/merchant-app && npm run dev",
+    "build": "npm run build:backend && npm run build:user-app && npm run build:merchant-app",
+    "build:backend": "cd backend && npm run build",
+    "build:user-app": "cd frontend/user-app && npm run build",
+    "build:merchant-app": "cd frontend/merchant-app && npm run build",
+    "start": "docker-compose up",
+    "setup": "npm install && npm run setup:backend && npm run setup:user-app && npm run setup:merchant-app",
+    "setup:backend": "cd backend && npm install && npx prisma generate",
+    "setup:user-app": "cd frontend/user-app && npm install",
+    "setup:merchant-app": "cd frontend/merchant-app && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: payment-app-postgres
+    environment:
+      POSTGRES_DB: payment_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - payment-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: payment-app-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - payment-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: payment-app-backend
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/payment_app
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key
+      - GMAIL_USER=your-email@gmail.com
+      - GMAIL_PASS=your-app-password
+      - GOOGLE_CLOUD_PROJECT_ID=your-project-id
+      - GOOGLE_CLOUD_KEY_FILE=./service-account.json
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - payment-network
+
+  user-app:
+    build:
+      context: ./frontend/user-app
+      dockerfile: Dockerfile
+    container_name: payment-app-user
+    ports:
+      - "3002:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+      - REACT_APP_WS_URL=ws://localhost:3001
+    volumes:
+      - ./frontend/user-app:/app
+      - /app/node_modules
+    networks:
+      - payment-network
+
+  merchant-app:
+    build:
+      context: ./frontend/merchant-app
+      dockerfile: Dockerfile
+    container_name: payment-app-merchant
+    ports:
+      - "3003:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+      - REACT_APP_WS_URL=ws://localhost:3001
+    volumes:
+      - ./frontend/merchant-app:/app
+      - /app/node_modules
+    networks:
+      - payment-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  payment-network:
+    driver: bridge

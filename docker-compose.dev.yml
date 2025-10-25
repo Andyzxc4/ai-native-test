@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: payment-app-postgres-dev
+    environment:
+      POSTGRES_DB: payment_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - payment-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: payment-app-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - payment-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  payment-network:
+    driver: bridge
