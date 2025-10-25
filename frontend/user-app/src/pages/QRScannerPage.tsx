@@ -29,6 +29,49 @@ const QRScannerPage: React.FC = () => {
     try {
       const qrData = JSON.parse(qrInput)
       
+      // Handle new QR format for payment requests
+      if (qrData.type === 'PAYMENT_REQUEST') {
+        // Check if QR code is expired
+        if (new Date(qrData.expiresAt) < new Date()) {
+          toast.error('QR code has expired')
+          speakError('QR code has expired')
+          return
+        }
+
+        // Check if trying to send money to self
+        if (qrData.recipientId === user?.id) {
+          toast.error('Cannot send money to yourself')
+          speakError('Cannot send money to yourself')
+          return
+        }
+
+        // Create a transaction for this payment request
+        const response = await fetch('http://localhost:3001/api/transactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            recipientId: qrData.recipientId,
+            amount: qrData.amount || 0,
+            description: `Payment to ${qrData.recipientName}`
+          })
+        })
+
+        const result = await response.json()
+        
+        if (response.ok) {
+          toast.success(`Payment initiated to ${qrData.recipientName}!`)
+          speakPaymentConfirmation(qrData.amount || 0, qrData.recipientName)
+          setQrInput('')
+        } else {
+          toast.error(result.error || 'Payment failed')
+          speakError(result.error || 'Payment failed')
+        }
+        return
+      }
+      
       if (qrData.type === 'receive') {
         // This is a QR code for receiving money, not for making a payment
         toast.error('This QR code is for receiving money, not for making payments')
@@ -36,13 +79,12 @@ const QRScannerPage: React.FC = () => {
         return
       }
 
-      // Process payment from QR code
+      // Process payment from QR code (legacy format)
       const response = await fetch('http://localhost:3001/api/payments/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'user-id': user?.id || ''
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           qrData: qrInput
@@ -51,13 +93,13 @@ const QRScannerPage: React.FC = () => {
 
       const result = await response.json()
       
-      if (result.success) {
-        toast.success('Payment sent successfully!')
-        speakPaymentConfirmation(result.transaction.amount, result.recipient?.fullName)
+      if (response.ok) {
+        toast.success('Payment processed successfully!')
+        speakPaymentConfirmation(result.transaction.amount, result.transaction.recipient?.fullName)
         setQrInput('')
       } else {
-        toast.error(result.message || 'Payment failed')
-        speakError(result.message || 'Payment failed')
+        toast.error(result.error || 'Payment failed')
+        speakError(result.error || 'Payment failed')
       }
     } catch (error) {
       console.error('QR processing error:', error)

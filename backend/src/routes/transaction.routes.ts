@@ -2,11 +2,13 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { PaymentService } from '../services/payment.service';
 import { TTSService } from '../services/tts.service';
+import { PrismaClient } from '@prisma/client';
 import { broadcastTransactionUpdate, broadcastPaymentSuccess, broadcastAudioReady } from '../websocket/socket.handler';
 
 const router = Router();
 const paymentService = new PaymentService();
 const ttsService = new TTSService();
+const prisma = new PrismaClient();
 
 // Validation schemas
 const initiateTransactionSchema = z.object({
@@ -22,6 +24,64 @@ const processPaymentSchema = z.object({
 
 const cancelTransactionSchema = z.object({
   transactionId: z.string().min(1, 'Transaction ID is required')
+});
+
+const createTransactionSchema = z.object({
+  recipientId: z.string().min(1, 'Recipient ID is required'),
+  amount: z.number().positive('Amount must be positive'),
+  description: z.string().optional()
+});
+
+// Create transaction (simple endpoint for QR scanning)
+router.post('/', async (req, res, next) => {
+  try {
+    const validatedData = createTransactionSchema.parse(req.body);
+    const userId = req.user!.id;
+
+    // Verify recipient exists
+    const recipient = await prisma.user.findUnique({
+      where: { id: validatedData.recipientId },
+      select: { id: true, fullName: true, email: true, isActive: true }
+    });
+
+    if (!recipient || !recipient.isActive) {
+      return res.status(404).json({
+        error: 'Recipient not found or inactive'
+      });
+    }
+
+    // Check if sender has sufficient balance
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, balance: true }
+    });
+
+    if (!sender) {
+      return res.status(404).json({
+        error: 'Sender not found'
+      });
+    }
+
+    if (sender.balance < validatedData.amount) {
+      return res.status(400).json({
+        error: 'Insufficient balance'
+      });
+    }
+
+    const transaction = await paymentService.initiateTransaction({
+      senderId: userId,
+      recipientId: validatedData.recipientId,
+      amount: validatedData.amount,
+      description: validatedData.description
+    });
+
+    res.status(201).json({
+      message: 'Transaction created successfully',
+      transaction
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Initiate transaction

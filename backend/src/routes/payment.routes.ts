@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { PaymentService } from '../services/payment.service';
 import { PrismaClient } from '@prisma/client';
+import QRCode from 'qrcode';
 
 const router = Router();
 const paymentService = new PaymentService();
@@ -10,6 +11,53 @@ const prisma = new PrismaClient();
 // Validation schemas
 const scanQRSchema = z.object({
   qrData: z.string().min(1, 'QR data is required')
+});
+
+const generateQRSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
+  amount: z.number().optional()
+});
+
+// Generate QR code for user to receive payments
+router.post('/generate-qr', async (req, res, next) => {
+  try {
+    const validatedData = generateQRSchema.parse(req.body);
+    const userId = req.user!.id;
+
+    // Verify the user exists and is active
+    const user = await prisma.user.findUnique({
+      where: { id: validatedData.userId },
+      select: { id: true, fullName: true, email: true, isActive: true }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(404).json({
+        error: 'User not found or inactive'
+      });
+    }
+
+    // Create QR data for receiving payments
+    const qrData = {
+      type: 'PAYMENT_REQUEST',
+      recipientId: user.id,
+      recipientName: user.fullName,
+      amount: validatedData.amount || null,
+      timestamp: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+    };
+
+    // Generate QR code
+    const qrCodeData = await QRCode.toDataURL(JSON.stringify(qrData));
+
+    res.json({
+      message: 'QR code generated successfully',
+      qrCode: qrCodeData,
+      qrData: JSON.stringify(qrData),
+      expiresAt: qrData.expiresAt
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Get QR code for transaction

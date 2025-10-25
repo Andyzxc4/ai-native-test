@@ -68,7 +68,8 @@ db.serialize(() => {
   const defaultPassword = bcrypt.hashSync('password', 10);
   db.run(`INSERT OR IGNORE INTO users (id, email, password, fullName, phoneNumber, balance, role) VALUES 
     (1, 'user@example.com', ?, 'John User', '+1234567890', 10000, 'USER'),
-    (2, 'merchant@example.com', ?, 'Jane Merchant', '+1234567891', 10000, 'MERCHANT')`, 
+    (2, 'user1@example.com', ?, 'Andre Lacra', '+1234567891', 10000, 'USER'),
+    (3, 'merchant@example.com', ?, 'Jane Merchant', '+1234567892', 10000, 'MERCHANT')`, 
     [defaultPassword, defaultPassword]);
 });
 

@@ -95,7 +95,7 @@ export class AuthService {
     return { user: userWithoutPassword, token, requiresOtp: false };
   }
 
-  async verifyOtp(userId: string, code: string, type: OtpType): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
+  async verifyOtp(userId: string, code: string, type: 'LOGIN' | 'PAYMENT' | 'RESET_PASSWORD'): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
     // Find valid OTP
     const otp = await prisma.otpCode.findFirst({
       where: {
@@ -135,7 +135,7 @@ export class AuthService {
     return { user: userWithoutPassword, token };
   }
 
-  async sendOtp(userId: string, type: OtpType): Promise<void> {
+  async sendOtp(userId: string, type: 'LOGIN' | 'PAYMENT' | 'RESET_PASSWORD'): Promise<void> {
     // Generate 6-digit OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 

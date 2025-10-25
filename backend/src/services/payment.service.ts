@@ -15,7 +15,7 @@ export class PaymentService {
     amount: number;
     description?: string;
   }): Promise<Transaction> {
-    // Validate sender has sufficient balance
+    // Validate sender exists and is active
     const sender = await prisma.user.findUnique({
       where: { id: data.senderId }
     });
@@ -24,17 +24,30 @@ export class PaymentService {
       throw new Error('Sender not found');
     }
 
+    if (!sender.isActive) {
+      throw new Error('Sender account is deactivated');
+    }
+
     if (sender.balance < data.amount) {
       throw new Error('Insufficient balance');
     }
 
-    // Validate recipient exists
+    // Validate recipient exists and is active
     const recipient = await prisma.user.findUnique({
       where: { id: data.recipientId }
     });
 
     if (!recipient) {
       throw new Error('Recipient not found');
+    }
+
+    if (!recipient.isActive) {
+      throw new Error('Recipient account is deactivated');
+    }
+
+    // Prevent self-transactions
+    if (data.senderId === data.recipientId) {
+      throw new Error('Cannot send money to yourself');
     }
 
     // Generate unique transaction ID
@@ -108,7 +121,7 @@ export class PaymentService {
     }
 
     // Verify OTP
-    await authService.verifyOtp(userId, otp, 'PAYMENT' as any);
+    await authService.verifyOtp(userId, otp, 'PAYMENT');
 
     // Update transaction status to processing
     await prisma.transaction.update({

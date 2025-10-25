@@ -25,7 +25,8 @@ app.use(express.json());
 // In-memory storage for demo
 let users = [
   { id: '1', email: 'user@example.com', password: 'password', fullName: 'John User', phoneNumber: '+1234567890', balance: 10000, role: 'USER', twoFactorEnabled: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: '2', email: 'merchant@example.com', password: 'password', fullName: 'Jane Merchant', phoneNumber: '+1234567891', balance: 10000, role: 'MERCHANT', twoFactorEnabled: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  { id: '2', email: 'user1@example.com', password: 'password', fullName: 'Andre Lacra', phoneNumber: '+1234567891', balance: 10000, role: 'USER', twoFactorEnabled: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: '3', email: 'merchant@example.com', password: 'password', fullName: 'Jane Merchant', phoneNumber: '+1234567892', balance: 10000, role: 'MERCHANT', twoFactorEnabled: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
 ];
 
 let transactions = [];
